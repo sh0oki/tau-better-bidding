@@ -1,24 +1,20 @@
 // ==UserScript==
 // @name            TAU - Better bidding
 // @description     Improve the user experience of bidding on courses in TAU's bidding website
-// @version         1.0.1
+// @version         1.0.2
 // @namespace       https://www.github.com/sh0oki/tau-better-bidding
 // @source          https://www.github.com/sh0oki/tau-better-bidding
 // @include         https://www.ims.tau.ac.il/Bidd/BD/Kursim.aspx*
 // @include         https://www.ims.tau.ac.il/tal/TL/Mivchanim_L.aspx*
+// @include         https://iims.tau.ac.il/tal/TL/Mivchanim_L.aspx*
+// @include         https://www.ims.tau.ac.il/tal/TL/Marechet_L.aspx*
+// @include         https://iims.tau.ac.il/tal/TL/Marechet_L.aspx*
 // @require         https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js
 // @copyright       2018, sh0oki
 // ==/UserScript==
 
 function mainWrapper() {
-    var debug = false;
-    var US_SHORT_NAME = 'BBD';
-    var US_VERSION = 1.0;
-    
-    function debugLog(msg) {
-        if (!debug) return;
-        console.log(US_SHORT_NAME + ": " + msg);
-    }
+    var start_of_semester = '';
     
     function main() {
         if (location.href.includes("Kursim.aspx")) {
@@ -30,6 +26,9 @@ function mainWrapper() {
         } else if (location.href.includes("Mivchanim_L.aspx")) {
             // Make Test date clickable
             add_to_google_calendar_links();
+        } else if (location.href.includes("Marechet_L.aspx")) {
+            // Make Test date clickable
+            add_courses_to_google_calendar_links();
         }
 
     }
@@ -68,15 +67,22 @@ function mainWrapper() {
             .attr('disabled', true);
     }
 
-    function link_to_google_calendar(where, date, time, title, description) {
-        m = moment(date + " " + time, "DD/MM/YYYY hh:mm").utc();
-        m2 = moment(m).add('hours', 2);
+    function link_to_google_calendar(where, date, time, title, description, loc, recur) {
+        if (time.indexOf('-') == -1) {
+            m = moment(date + " " + time, "DD/MM/YYYY hh:mm").utc();
+            m2 = moment(m).add('hours', 2);
+        } else {
+            times = time.split('-');
+            m = moment(date + " " + times[0], "DD/MM/YYYY hh:mm").utc();
+            m2 = moment(date + " " + times[1], "DD/MM/YYYY hh:mm").utc();
+        }
+        
         date_range = m.format() + "/" + m2.format();
 
         url = "http://www.google.com/calendar/event?action=TEMPLATE&text=" + encodeURIComponent(title) + 
                 "&dates=" + encodeURIComponent(date_range.replace(/[\:\-]/g, "")) + 
-                "&location=" + encodeURIComponent("Tel Aviv University") + 
-                "&details=" + encodeURIComponent(description);
+                "&location=" + encodeURIComponent(loc) + 
+                "&details=" + encodeURIComponent(description) + recur;
         
         $(where).wrapInner("<a target=\"_blank\" href=\"" + url + "\"></a>")
     }
@@ -99,7 +105,59 @@ function mainWrapper() {
             link_to_google_calendar(cells[4],
                 date, time,
                 exam_name, 
-                "");
+                "", "Tel Aviv University", "");
+        });
+    }
+
+    function translate_day_of_week(a) {
+        switch (a[0]) {
+            case 'א':
+                return 7;
+            case 'ב':
+                return 1;
+            case 'ג':
+                return 2;
+            case 'ד':
+                return 3;
+            case 'ה':
+                return 4;
+            case 'ו':
+                return 5;
+            case 'ש':
+                return 6;
+        }
+    }
+    
+    function add_courses_to_google_calendar_links() {
+        start_of_semester = moment(prompt("First day of semester? [dd/mm/yyyy]"), 'DD/MM/YYYY');
+        semester_start_day = start_of_semester.isoWeekday();
+
+        $.each($("table.table tr:not(.listth)"), function(_, tr) {
+            cells = $(tr).find("td");
+            if (11 != cells.length) {
+                return;
+            }
+
+            course_id = cells[1].innerText;
+            course_name = cells[3].innerText;
+            course_type = cells[4].innerText;
+            day_of_week = cells[7].innerText;
+            n_day_of_week = translate_day_of_week(day_of_week.replace(/\s/,''));
+            hours = cells[8].innerText;
+            course_location = cells[9].innerText + ", חדר " + cells[10].innerText;
+            
+            start_date = start_of_semester.clone().isoWeekday(n_day_of_week);
+
+            if (semester_start_day > n_day_of_week) { 
+              start_date = start_of_semester.clone().add(1, 'weeks').isoWeekday(n_day_of_week);
+            }
+
+            link_to_google_calendar(cells[8],
+                start_date.format("DD/MM/YYYY"), hours,
+                course_name + ": " + course_type, 
+                "",
+                course_location, 
+                "&recur=RRULE:FREQ=WEEKLY");
         });
     }
 
