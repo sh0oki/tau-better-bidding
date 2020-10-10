@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            TAU - Better bidding
 // @description     Improve the user experience of bidding on courses in TAU's bidding website
-// @version         1.0.2
+// @version         1.0.3
 // @namespace       https://www.github.com/sh0oki/tau-better-bidding
 // @source          https://www.github.com/sh0oki/tau-better-bidding
 // @include         https://www.ims.tau.ac.il/Bidd/BD/Kursim.aspx*
@@ -10,6 +10,7 @@
 // @include         https://www.ims.tau.ac.il/tal/TL/Marechet_L.aspx*
 // @include         https://iims.tau.ac.il/tal/TL/Marechet_L.aspx*
 // @require         https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js
+// @require         https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js
 // @copyright       2018, sh0oki
 // ==/UserScript==
 
@@ -134,17 +135,17 @@ function mainWrapper() {
 
         $.each($("table.table tr:not(.listth)"), function(_, tr) {
             cells = $(tr).find("td");
-            if (11 != cells.length) {
+            if (13 != cells.length) {
                 return;
             }
 
             course_id = cells[1].innerText;
             course_name = cells[3].innerText;
             course_type = cells[4].innerText;
-            day_of_week = cells[7].innerText;
+            day_of_week = cells[8].innerText;
             n_day_of_week = translate_day_of_week(day_of_week.replace(/\s/,''));
-            hours = cells[8].innerText;
-            course_location = cells[9].innerText + ", חדר " + cells[10].innerText;
+            hours = cells[9].innerText;
+            course_location = cells[10].innerText + ", חדר " + cells[11].innerText;            
             
             start_date = start_of_semester.clone().isoWeekday(n_day_of_week);
 
